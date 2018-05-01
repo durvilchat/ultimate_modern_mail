@@ -2,8 +2,7 @@
 {
     'name': "Ultimate modern mail",
 
-    'summary': """Utimate modern mail is a module that has been developed to improve basic email that odoo
-            but at your disposal""",
+    'summary': """A modern chat for your odoo ERP, delete,edit, emojis""",
 
     'author': "Kywana dev solution",
 
