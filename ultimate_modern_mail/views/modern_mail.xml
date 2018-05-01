@@ -1,0 +1,34 @@
+<odoo>
+    <data>
+        <template id="assets_backend_mail_customize" name="modern_mail assets" inherit_id="web.assets_backend">
+            <xpath expr="//script[@src='/mail/static/src/js/client_action.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/chat_window.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/chat_manager.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/thread_field.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/window_manager.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/composer.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/utils.js']" position="replace"/>
+            <xpath expr="//script[@src='/mail/static/src/js/chat_mixin.js']" position="replace"/>
+            <xpath expr="." position="inside">
+                <script type="text/javascript" src="/ultimate_modern_mail/static/extra-script/js/emojione.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/client_action.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/chat_window.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/chat_manager.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/thread_field.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/window_manager.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/thread.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/chat_mixin.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/composer.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/utils.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/emojies_data.js"/>
+                <script type="text/javascript" src="/ultimate_modern_mail/static/src/js/emojies_class.js"/>
+                <link rel="stylesheet"
+                      href="/ultimate_modern_mail/static/extra-script/css/jquery.emojipicker.css"/>
+                <!-- Emoji Data -->
+                <link rel="stylesheet" href="/ultimate_modern_mail/static/extra-script/css/emojione.min.css"/>
+                <link rel="stylesheet" href="/ultimate_modern_mail/static/extra-script/css/jquery.emojipicker.tw.css"/>
+                <link rel="stylesheet" href="/ultimate_modern_mail/static/src/less/thread.less"/>
+            </xpath>
+        </template>
+    </data>
+</odoo>
