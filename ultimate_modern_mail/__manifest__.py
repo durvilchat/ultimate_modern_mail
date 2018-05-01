@@ -9,7 +9,7 @@
 
     'category': 'Discuss',
     'version': '1.0',
-    'price': 65,
+    'price': 75,
     'currency': 'EUR',
     'license': 'AGPL-3',
     'installable': True,
