@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-extend="mail.ChatThread.Message">
+          <t t-jquery="div" t-operation="replace">
+          <div t-if="!is_system_notification" t-att-class="'o_thread_message' + (message.expanded ? ' o_message_expanded '  : ' ') + (message.is_selected ? 'o_thread_selected_message' : ' ') + (message.is_author ? ' align-right' : ' ')+(!message.display_author?' coll':'')" t-att-data-message-id="message.id">
+                <div t-if="message.display_author and options.display_avatar" class="o_thread_message_sidebar">
+                    <t t-if="!message.mailto and message.author_id[0]">
+                        <img t-if="message.avatar_src and message.display_author and !message.is_author "
+                            t-att-src="message.avatar_src"
+                            data-oe-model="res.partner"
+                            t-att-data-oe-id="message.author_redirect ? message.author_id[0] : ''"
+                            t-attf-class="o_thread_message_avatar img-circle #{message.author_redirect ? 'o_mail_redirect' : ''}"/>
+                    </t>
+                    <t t-if="message.mailto || !message.author_id[0]">
+                        <img t-if="message.avatar_src and message.display_author"
+                            t-att-src="message.avatar_src"
+                            class="o_thread_message_avatar img-circle"/>
+                    </t>
+                </div>
+                <div t-att-class="'o_thread_message_core' + (message.is_note ? ' o_mail_note' : ' ')">
+
+             <div t-if="!message.display_author and options.display_avatar" t-att-class="'o_thread_message_sidebar_small hide '+(!message.display_author and message.is_author?'text-right marge':'text-left')">
+                    <span  t-att-title="message.date.format(date_format)" class="o_thread_message_side_date">
+                        <t t-esc="message.date.format('hh:mm')"/>
+                    </span>
+                    <t t-if="!message.mailto and message.is_author" t-call="mail.chat.Option"/>
+                </div>
+                    <p t-if="message.display_author"  t-att-class="'o_mail_info message-data' + (!message.mailto and message.is_author?' text-right':'')">
+                        <t t-if="message.is_note">
+                            Note by
+                        </t>
+
+                        <strong t-if="message.mailto">
+                            <a class="o_mail_mailto" t-attf-href="mailto:#{message.mailto}?subject=Re: #{message.subject}">
+                                <t t-esc="message.mailto"/>
+                            </a>
+                        </strong>
+
+                        <t t-if="!message.mailto and message.is_author" t-call="mail.chat.Option"/>
+
+                         <small t-if="message.is_author" class="o_mail_timestamp message-data-time" t-att-title="message.date.format(date_format)">
+                             <t t-esc="message.hour"/> - </small>
+
+                        <strong t-if="!message.mailto and message.author_id[0]"
+                                data-oe-model="res.partner" t-att-data-oe-id="message.author_redirect ? message.author_id[0] : ''"
+                                t-attf-class="o_thread_author #{message.author_redirect ? 'o_mail_redirect' : ''}">
+                            <i t-if="!message.is_author"  class="fa fa-circle online"></i>
+                             <t t-if="status" t-call="mail.chat.UserStatus"/>
+                            <t t-esc="message.displayed_author"/>
+                             <t t-if="status" t-call="mail.chat.UserStatus"/>
+                            <i t-if="message.is_author" class="fa fa-circle online me"></i>
+                        </strong>
+                        <strong t-if="!message.mailto and !message.author_id[0]" class="o_thread_author message-data-name">
+                           <i t-if="!message.is_author" class="fa fa-circle online"></i>
+                             <t t-if="status" t-call="mail.chat.UserStatus"/>
+                            <t t-esc="message.displayed_author"/>
+                            <i t-if="message.is_author" class="fa fa-circle online me"></i>
+                        </strong>
+
+                       <small t-if="message.mailto|| !message.is_author" class="o_mail_timestamp message-data-time" t-att-title="message.date.format(date_format)"> - <t t-esc="message.hour"/></small>
+                        <t t-if="message.model and (message.model != 'mail.channel') and options.display_document_link">
+                            <a t-att-href="message.url" t-att-data-oe-model="message.model" t-att-data-oe-id="message.res_id" class="o_document_link">on <t t-esc="message.record_name"/></a>
+                        </t>
+                        <t t-if="message.origin_id and (message.origin_id !== options.channel_id)">
+                            (from <a t-att-data-oe-id="message.origin_id" href="#">#<t t-esc="message.origin_name"/></a>)
+                        </t>
+                        <span t-if="options.display_email_icon and message.customer_email_data and message.customer_email_data.length" class="o_thread_tooltip_container">
+                            <i t-att-class="'o_thread_tooltip o_thread_message_email o_thread_message_email_' + message.customer_email_status + ' fa fa-envelope-o'"/>
+                            <span class="o_thread_tooltip_content">
+                                <t t-foreach="message.customer_email_data" t-as="customer">
+                                    <span>
+                                        <t t-if="customer[2] == 'sent'"><i class='fa fa-check'/></t>
+                                        <t t-if="customer[2] == 'bounce'"><i class='fa fa-exclamation'/></t>
+                                        <t t-if="customer[2] == 'exception'"><i class='fa fa-exclamation'/></t>
+                                        <t t-if="customer[2] == 'ready'"><i class='fa fa-send-o'/></t>
+                                        <t t-esc="customer[1]"/>
+                                    </span>
+                                    <br />
+                                </t>
+                            </span>
+                        </span>
+                        <t t-if="message.mailto || !message.is_author" t-call="mail.chat.Option"/>
+                    </p>
+
+                    <div t-att-class="'o_thread_message_content'+(!message.display_author and !message.is_author?' marge':'') + (!message.mailto and message.is_author?' my-message pull-right':' other-message pull-left')">
+                        <t t-if="message.tracking_value_ids and message.tracking_value_ids.length &gt; 0">
+                            <t t-if="message.subtype_description">
+                                <p><t t-esc="message.subtype_description"/></p>
+                            </t>
+                            <t t-call="mail.ChatThread.MessageTracking"/>
+                        </t>
+                        <p t-if="options.display_subject and message.display_subject" class="o_mail_subject">Subject: <t t-esc="message.subject"/></p>
+                        <t t-if="!(message.tracking_value_ids and message.tracking_value_ids.length &gt; 0)">
+                            <t t-raw="message.body"/>
+                        </t>
+                         <t t-foreach="message.attachment_ids" t-as="attachment">
+                             <t t-call="mail.Attachment"/>
+                         </t>
+                    </div>
+                </div>
+            </div>
+           </t>
+       </t>
+        <t t-name="mail.chat.Option">
+                        <span t-attf-class="o_thread_icons">
+                          <i t-if="message.is_author"
+                               class="fa fa-trash-o o_thread_icon o_thread_detete"
+                               t-att-data-message-id="message.id" type="object" confirm="Are you sure you want to do this?"  title="Delete"/>
+                           <i t-if="message.is_author"
+                               class="fa fa-edit o_thread_icon o_editemessage"
+                               t-att-data-message-id="message.id" type="object"   title="Edit"/>
+                             <i t-if="options.display_stars &amp;&amp; !message.is_system_notification"
+                                t-att-class="'fa fa-lg o_thread_icon o_thread_message_star ' + (message.is_starred ? 'fa-star' : 'fa-star-o')"
+                                t-att-data-message-id="message.id" title="Mark as Todo"/>
+                           <i t-if="message.record_name &amp;&amp; message.model != 'mail.channel' &amp;&amp; options.display_reply_icon"
+                               class="fa fa-reply o_thread_icon o_thread_message_reply"
+                               t-att-data-message-id="message.id" title="Reply"/>
+                            <i t-if="message.is_needaction &amp;&amp; options.display_needactions"
+                               class="fa fa-check o_thread_icon o_thread_message_needaction"
+                               t-att-data-message-id="message.id" title="Mark as Read"/>
+                        </span>
+              </t>
+</templates>
