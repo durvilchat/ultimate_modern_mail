@@ -27,7 +27,6 @@
                 <!-- Emoji Data -->
                 <link rel="stylesheet" href="/ultimate_modern_mail/static/extra-script/css/emojione.min.css"/>
                 <link rel="stylesheet" href="/ultimate_modern_mail/static/extra-script/css/jquery.emojipicker.tw.css"/>
-                <link rel="stylesheet" href="/ultimate_modern_mail/static/src/less/thread.less"/>
             </xpath>
         </template>
     </data>
