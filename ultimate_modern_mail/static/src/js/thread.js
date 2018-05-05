@@ -1,4 +1,4 @@
-odoo.define('mail_modern.thread', function (require) {
+odoo.define('ultimate_mail_modern.thread', function (require) {
     "use strict";
     var core = require('web.core');
     var QWeb = core.qweb;
