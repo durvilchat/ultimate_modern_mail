@@ -15,7 +15,7 @@
     'application': False,
     'images': ['images/image1.jpg', 'images/image2.PNG'],
     'data': [
-        'views/modern_mail.xml',
+        'views/ultimate_modern_mail.xml',
     ],
     'qweb': [
         'static/src/xml/client_action.xml',
