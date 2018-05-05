@@ -80,18 +80,15 @@ class ChildMessage(models.Model):
         return message_values
 
     @api.multi
-    def edit_message(self, body='', **kwargs):
-        self.check_access_rule('unlink')
+    def edit_message(self, body):
         self.search([('id', '=', self.id)]).write({'body': body, 'action': 'edit'})
         message = self.search([('id', '=', self.id)])
         if not self.env.context.get('message_create_from_mail_mail'):
             message._notify(force_send=self.env.context.get('mail_notify_force_send', True),
                             user_signature=self.env.context.get('mail_notify_user_signature', True))
-        return message
 
     @api.multi
     def delete_message(self):
-        self.check_access_rule('unlink')
         message = self
         message.write({'action': 'del'})
         if not self.env.context.get('message_create_from_mail_mail'):

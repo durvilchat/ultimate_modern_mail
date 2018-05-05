@@ -1,16 +1,16 @@
 odoo.define('mail.composer', function (require) {
     "use strict";
 
-    var chat_mixin = require('mail.chat_mixin');
-    var DocumentViewer = require('mail.DocumentViewer');
+    var chat_manager = require('mail.chat_manager');
     var utils = require('mail.utils');
 
-    var config = require('web.config');
     var core = require('web.core');
     var data = require('web.data');
-    var dom = require('web.dom');
+    var dom_utils = require('web.dom_utils');
+    var Model = require('web.Model');
     var session = require('web.session');
     var Widget = require('web.Widget');
+
     var emojeis = require('mail_modern.emojies_class');
 
     var QWeb = core.qweb;
@@ -334,35 +334,35 @@ odoo.define('mail.composer', function (require) {
         // Cursor position and selection utils
         _get_selection_positions: function () {
             var el = this.composer.$input.get(0);
-            return el ? dom.getSelectionRange(el) : {start: 0, end: 0};
+            return el ? {start: el.selectionStart, end: el.selectionEnd} : {start: 0, end: 0};
         },
         _set_cursor_position: function (pos) {
             this.composer.$input.each(function (index, elem) {
-                dom.setSelectionRange(elem, {start: pos, end: pos});
+                if (elem.setSelectionRange) {
+                    elem.setSelectionRange(pos, pos);
+                }
+                else if (elem.createTextRange) {
+                    elem.createTextRange().collapse(true).moveEnd('character', pos).moveStart('character', pos).select();
+                }
             });
         },
 
     });
 
-    var BasicComposer = Widget.extend(chat_mixin, {
+    var BasicComposer = Widget.extend({
         template: "mail.ChatComposer",
+
         events: {
             "keydown .o_composer_input textarea": "on_keydown",
             "keyup .o_composer_input": "on_keyup",
-            "change input.o_input_file": "on_attachment_change",
+            "change input.o_form_input_file": "on_attachment_change",
             "click .o_composer_button_send": "send_message",
-            "click .o_composer_button_cancel": "cancel_edit_message",
+            //"click .o_composer_button_emoji": "_onEmojiButtonClick",
             "click .o_composer_button_add_attachment": "on_click_add_attachment",
             "click .o_attachment_delete": "on_attachment_delete",
-            "click .o_attachment_download": "_onAttachmentDownload",
-            "click .o_attachment_view": "_onAttachmentView",
-            'click .o_composer_button_emoji': '_onEmojiButtonClick',
-            'focusout .o_composer_button_emoji': '_onEmojiButtonFocusout',
-            'focus .o_mail_emoji_container .o_mail_emoji': '_onEmojiImageFocus',
+            "click .o_composer_button_cancel": "cancel_edit_message",
             'click .o_mail_emoji_container .o_mail_emoji': '_onEmojiImageClick',
         },
-        // RPCs done to fetch the mention suggestions are throttled with the following value
-        MENTION_THROTTLE: 200,
 
         init: function (parent, options) {
             this._super.apply(this, arguments);
@@ -377,9 +377,9 @@ odoo.define('mail.composer', function (require) {
                 send_text: _t('Send'),
                 default_body: '',
                 default_mention_selections: {},
-                isMobile: config.device.isMobile
             });
             this.context = this.options.context;
+
             // Attachments
             this.AttachmentDataSet = new data.DataSetSearch(this, 'ir.attachment', this.context);
             this.fileupload_id = _.uniqueId('o_chat_fileupload');
@@ -421,17 +421,16 @@ odoo.define('mail.composer', function (require) {
                 });
             }
 
-            this.isMini = options.isMini;
+            // Emojis
+            this.emoji_container_classname = 'o_composer_emoji';
 
-            this.avatarURL = session.uid > 0 ? session.url('/web/image', {
-                model: 'res.users',
-                field: 'image_small',
-                id: session.uid,
-            }) : '/web/static/src/img/user_menu_avatar.png';
+            this.PartnerModel = new Model('res.partner');
+            this.ChannelModel = new Model('mail.channel');
         },
 
         start: function () {
             var self = this;
+
             this.$attachment_button = this.$(".o_composer_button_add_attachment");
             this.$attachments_list = this.$('.o_composer_attachments_list');
             this.$input = this.$('.o_composer_input textarea');
@@ -439,32 +438,57 @@ odoo.define('mail.composer', function (require) {
                 self.trigger('input_focused');
             });
             this.$input.val(this.options.default_body);
-            dom.autoresize(this.$input, {parent: this, min_height: this.options.input_min_height});
+            dom_utils.autoresize(this.$input, {parent: this, min_height: this.options.input_min_height});
 
             // Attachments
             $(window).on(this.fileupload_id, this.on_attachment_loaded);
             this.on("change:attachment_ids", this, this.render_attachments);
+
+            // Emoji
+
+            this.$('.o_composer_button_emoji').popover({
+                placement: 'top',
+                content: function () {
+                    if (!self.$emojis) { // lazy rendering
+                        self.$emojis = $(QWeb.render('mail.ChatComposer.emojis.new', {
+                            emojis: emojeis.getEmojis(),
+                        }));
+                        self.$emojis.filter('.o_mail_emoji').on('click', self, self.on_click_emoji_img);
+                    }
+                    return self.$emojis;
+                },
+                html: true,
+                container: '.' + self.emoji_container_classname,
+                trigger: 'focus',
+            });
 
             // Mention
             this.mention_manager.prependTo(this.$('.o_composer'));
 
             return this._super();
         },
-
+        _onEmojiButtonClick: function (e) {
+            e.preventDefault();
+            if (!this.$emojisContainer) { // lazy rendering
+                this.$emojisContainer = $(QWeb.render('mail.ChatComposer.emojis.new', {
+                    emojis: emojeis.getEmojis(),
+                }));
+            }
+            if (this.$emojisContainer.parent().length) {
+                //this.get_emojis();
+            } else {
+                this.$emojisContainer.appendTo(this.$('.o_composer'));
+            }
+        },
         destroy: function () {
             $(window).off(this.fileupload_id);
             return this._super.apply(this, arguments);
         },
 
-        set_input: function (text) {
-            this.$('.o_composer_text_field').val(text);
+        toggle: function (state) {
+            this.$el.toggle(state);
         },
-        cancelEditBututom: function (actioon) {
-            if (actioon == 'show' && this.$('.o_composer_button_cancel').length < 1)
-                this.$('.o_composer_button_send ').after('<button class="btn btn-sm btn-primary o_composer_button_cancel hidden-xs" tabindex="3" type="button">Cancel</button>');
-            else if (actioon == 'hide')
-                this.$('.o_composer_button_cancel').remove()
-        },
+
         preprocess_message: function () {
             // Return a deferred as this function is extended with asynchronous
             // behavior for the chatter composer
@@ -479,57 +503,52 @@ odoo.define('mail.composer', function (require) {
                 command: commands.length > 0 ? commands[0].name : undefined,
             });
         },
-        cancel_edit_message: function () {
-            var self = this;
-            self.trigger('cancel_edit_message');
-            self.clear_composer_on_send();
-        },
+
         send_message: function () {
             if (this.is_empty() || !this.do_check_attachment_upload()) {
                 return;
             }
 
-            clearTimeout(this.canned_timeout);
             var self = this;
             this.preprocess_message().then(function (message) {
                 self.trigger('post_message', message);
-                self.clear_composer_on_send();
+
+                // Empty input, selected partners and attachments
+                self.$input.val('');
+                self.mention_manager.reset_selections();
                 self.cancelEditBututom('hide');
+                self.set('attachment_ids', []);
+
                 self.$input.focus();
             });
-
         },
 
-        clear_composer: function () {
-            // Empty input, selected partners and attachments
-            this.$input.val('');
-            this.mention_manager.reset_selections();
-            this.set('attachment_ids', []);
+        set_input: function (text) {
+            this.$('.o_composer_text_field').val(text);
         },
-
-        clear_composer_on_send: function () {
-            this.clear_composer();
-            if (this.$emojisContainer && this.$emojisContainer.parent().length) {
-                this._hideEmojis();
-            }
-        },
-
-        getState: function () {
-            return {
-                attachments: this.get('attachment_ids'),
-                text: this.$input.val(),
-            };
+        cancelEditBututom: function (actioon) {
+            if (actioon == 'show' && this.$('.o_composer_button_cancel').length < 1)
+                this.$('.o_composer_button_add_attachment ').after('<button class="btn btn-sm btn-icon fa fa-times-circle-o  o_composer_button_cancel" title="Cancel edit mode" tabindex="6" type="button"></button>');
+            else if (actioon == 'hide')
+                this.$('.o_composer_button_cancel').remove()
         },
 
         // Events
         on_click_add_attachment: function () {
-            this.$('input.o_input_file').click();
+            this.$('input.o_form_input_file').click();
             this.$input.focus();
         },
 
-        setState: function (state) {
-            this.set('attachment_ids', state.attachments);
-            this.$input.val(state.text);
+        on_click_emoji_img: function (event) {
+            alert(' deltat');
+            var data = emojeis.emojiClicked($(event.currentTarget).data('emoji'));
+            if (data != null) {
+                console.log(data);
+                this.$input.val(this.$input.val() + " " + data + " ");
+                this.$input.focus();
+                // this._hideEmojis();
+            }
+            this.$input.focus();
         },
 
         /**
@@ -538,7 +557,13 @@ odoo.define('mail.composer', function (require) {
         should_send: function (event) {
             return !event.shiftKey;
         },
-
+        _onEmojiImageClick: function (ev) {
+            var data = emojeis.emojiClicked($(ev.currentTarget).data('emoji'));
+            if (data != null) {
+                this.$input.val(this.$input.val() + " " + data + " ");
+                this.$input.focus();
+            }
+        },
         on_keydown: function (event) {
             switch (event.which) {
                 // UP, DOWN: prevent moving cursor if navigation in mention propositions
@@ -572,12 +597,8 @@ odoo.define('mail.composer', function (require) {
                     break;
                 // ESCAPE: close mention propositions
                 case $.ui.keyCode.ESCAPE:
-                    if (this.mention_manager.is_open()) {
-                        event.stopPropagation();
-                        this.mention_manager.reset_suggestions();
-                    } else {
-                        this.trigger_up("escape_pressed");
-                    }
+                    event.stopPropagation();
+                    this.mention_manager.reset_suggestions();
                     break;
                 // ENTER, UP, DOWN: check if navigation in mention propositions
                 case $.ui.keyCode.ENTER:
@@ -593,62 +614,68 @@ odoo.define('mail.composer', function (require) {
             }
         },
 
+        cancel_edit_message: function () {
+            var self = this;
+            self.trigger('cancel_edit_message');
+            // Empty input, selected partners and attachments
+            self.$input.val('');
+        },
+
         // Attachments
         on_attachment_change: function (event) {
-            var self = this,
-                files = event.target.files,
-                attachments = self.get('attachment_ids');
-
-            _.each(files, function (file) {
-                var attachment = _.findWhere(attachments, {name: file.name});
-                // if the files already exits, delete the file before upload
-                if (attachment) {
-                    self.AttachmentDataSet.unlink([attachment.id]);
-                    attachments = _.without(attachments, attachment);
+            var $target = $(event.target);
+            if ($target.val() !== '') {
+                var filename = $target.val().replace(/.*[\\\/]/, '');
+                // if the files exits for this answer, delete the file before upload
+                var attachments = [];
+                for (var i in this.get('attachment_ids')) {
+                    if ((this.get('attachment_ids')[i].filename || this.get('attachment_ids')[i].name) === filename) {
+                        if (this.get('attachment_ids')[i].upload) {
+                            return false;
+                        }
+                        this.AttachmentDataSet.unlink([this.get('attachment_ids')[i].id]);
+                    } else {
+                        attachments.push(this.get('attachment_ids')[i]);
+                    }
                 }
-            });
+                // submit filename
+                this.$('form.o_form_binary_form').submit();
+                this.$attachment_button.prop('disabled', true);
 
-            this.$('form.o_form_binary_form').submit();
-            this.$attachment_button.prop('disabled', true);
-            var upload_attachments = _.map(files, function (file) {
-                return {
+                attachments.push({
                     'id': 0,
-                    'name': file.name,
-                    'filename': file.name,
+                    'name': filename,
+                    'filename': filename,
                     'url': '',
                     'upload': true,
                     'mimetype': '',
-                };
-            });
-            attachments = attachments.concat(upload_attachments);
-            this.set('attachment_ids', attachments);
+                });
+                this.set('attachment_ids', attachments);
+            }
         },
-        on_attachment_loaded: function (event) {
-            var self = this,
-                attachments = this.get('attachment_ids'),
-                files = Array.prototype.slice.call(arguments, 1);
-
-            _.each(files, function (file) {
-                if (file.error || !file.id) {
-                    this.do_warn(file.error);
-                    attachments = _.filter(attachments, function (attachment) {
-                        return !attachment.upload;
-                    });
-                } else {
-                    var attachment = _.findWhere(attachments, {filename: file.filename, upload: true});
-                    if (attachment) {
-                        attachments = _.without(attachments, attachment);
-                        attachments.push({
-                            'id': file.id,
-                            'name': file.name || file.filename,
-                            'filename': file.filename,
-                            'mimetype': file.mimetype,
-                            'url': session.url('/web/content', {'id': file.id, download: true}),
+        on_attachment_loaded: function (event, result) {
+            var attachment_ids = [];
+            if (result.error || !result.id) {
+                this.do_warn(result.error);
+                attachment_ids = _.filter(this.get('attachment_ids'), function (val) {
+                    return !val.upload;
+                });
+            } else {
+                _.each(this.get('attachment_ids'), function (a) {
+                    if (a.filename === result.filename && a.upload) {
+                        attachment_ids.push({
+                            'id': result.id,
+                            'name': result.name || result.filename,
+                            'filename': result.filename,
+                            'mimetype': result.mimetype,
+                            'url': session.url('/web/content', {'id': result.id, download: true}),
                         });
+                    } else {
+                        attachment_ids.push(a);
                     }
-                }
-            }.bind(this));
-            this.set('attachment_ids', attachments);
+                });
+            }
+            this.set('attachment_ids', attachment_ids);
             this.$attachment_button.prop('disabled', false);
         },
         on_attachment_delete: function (event) {
@@ -684,20 +711,18 @@ odoo.define('mail.composer', function (require) {
 
         // Mention
         mention_fetch_throttled: function (model, method, kwargs) {
-            var self = this;
             // Delays the execution of the RPC to prevent unnecessary RPCs when the user is still typing
             var def = $.Deferred();
             clearTimeout(this.mention_fetch_timer);
             this.mention_fetch_timer = setTimeout(function () {
-                return self._rpc({model: model, method: method, kwargs: kwargs})
-                    .then(function (results) {
-                        def.resolve(results);
-                    });
-            }, this.MENTION_THROTTLE);
+                return model.call(method, kwargs).then(function (results) {
+                    def.resolve(results);
+                });
+            }, 200);
             return def;
         },
         mention_fetch_channels: function (search) {
-            return this.mention_fetch_throttled('mail.channel', 'get_mention_suggestions', {
+            return this.mention_fetch_throttled(this.ChannelModel, 'get_mention_suggestions', {
                 limit: this.options.mention_fetch_limit,
                 search: search,
             }).then(function (suggestions) {
@@ -727,7 +752,7 @@ odoo.define('mail.composer', function (require) {
                 });
                 if (!suggestions.length && !self.options.mention_partners_restricted) {
                     // no result found among prefetched partners, fetch other suggestions
-                    suggestions = self.mention_fetch_throttled('res.partner', 'get_mention_suggestions', {
+                    suggestions = self.mention_fetch_throttled(self.PartnerModel, 'get_mention_suggestions', {
                         limit: limit,
                         search: search,
                     });
@@ -736,18 +761,12 @@ odoo.define('mail.composer', function (require) {
             });
         },
         mention_get_canned_responses: function (search) {
-            var self = this;
-            var def = $.Deferred();
-            clearTimeout(this.canned_timeout);
-            this.canned_timeout = setTimeout(function () {
-                var canned_responses = self._getCannedResponses();
-                var matches = fuzzy.filter(utils.unaccent(search), _.pluck(canned_responses, 'source'));
-                var indexes = _.pluck(matches.slice(0, self.options.mention_fetch_limit), 'index');
-                def.resolve(_.map(indexes, function (i) {
-                    return canned_responses[i];
-                }));
-            }, 500);
-            return def;
+            var canned_responses = chat_manager.get_canned_responses();
+            var matches = fuzzy.filter(utils.unaccent(search), _.pluck(canned_responses, 'source'));
+            var indexes = _.pluck(matches.slice(0, this.options.mention_fetch_limit), 'index');
+            return _.map(indexes, function (i) {
+                return canned_responses[i];
+            });
         },
         mention_get_commands: function (search) {
             var search_regexp = new RegExp(_.str.escapeRegExp(utils.unaccent(search)), 'i');
@@ -772,97 +791,6 @@ odoo.define('mail.composer', function (require) {
         focus: function () {
             this.$input.focus();
         },
-
-        //--------------------------------------------------------------------------
-        // Private
-        //--------------------------------------------------------------------------
-
-        /**
-         * Hides the emojis container.
-         *
-         * @private
-         */
-        _hideEmojis: function () {
-            this.$emojisContainer.remove();
-        },
-
-        //--------------------------------------------------------------------------
-        // Handlers
-        //--------------------------------------------------------------------------
-
-        /**
-         * @private
-         * @param {MouseEvent} event
-         */
-        _onAttachmentDownload: function (event) {
-            event.stopPropagation();
-        },
-        /**
-         * @private
-         * @param {MouseEvent} event
-         */
-        _onAttachmentView: function (event) {
-            var activeAttachmentID = $(event.currentTarget).data('id');
-            var attachments = this.get('attachment_ids');
-            if (activeAttachmentID) {
-                var attachmentViewer = new DocumentViewer(this, attachments, activeAttachmentID);
-                attachmentViewer.appendTo($('body'));
-            }
-        },
-        /**
-         * Called when the emoji button is clicked -> opens/hides the emoji panel.
-         * Also, this method is in charge of the rendering of this panel the first
-         * time it is opened.
-         *
-         * @private
-         */
-        _onEmojiButtonClick: function (e) {
-            e.preventDefault();
-            if (!this.$emojisContainer) { // lazy rendering
-                this.$emojisContainer = $(QWeb.render('mail.ChatComposer.emojis.new', {
-                    emojis: emojeis.getEmojis(),
-                }));
-            }
-            if (this.$emojisContainer.parent().length) {
-                this._hideEmojis();
-            } else {
-                this.$emojisContainer.appendTo(this.$('.o_composer'));
-            }
-        },
-        /**
-         * Called when the emoji button is blurred -> closes the emoji panel. The
-         * closing is scheduled to be done at the end of the current execution
-         * stack to allow stoping this closing if the button was focusout to select
-         * an emoji (for example).
-         *
-         * @private
-         */
-        _onEmojiButtonFocusout: function () {
-            this._hideEmojisTimeout = setTimeout(this._hideEmojis.bind(this), 0);
-        },
-        /**
-         * Called when an emoji is focused -> @see _onEmojiButtonFocusout
-         *
-         * @private
-         */
-        _onEmojiImageFocus: function () {
-            clearTimeout(this._hideEmojisTimeout);
-        },
-        /**
-         * Called when an emoji is clicked -> adds it in the <input/>, focuses the
-         * <input/> and closes the emoji panel.
-         *
-         * @private
-         * @param {Event} ev
-         */
-        _onEmojiImageClick: function (ev) {
-            var data = emojeis.emojiClicked($(ev.currentTarget).data('emoji'));
-            if (data != null) {
-                this.$input.val(this.$input.val() + " " + data + " ");
-                this.$input.focus();
-                // this._hideEmojis();
-            }
-        },
     });
 
     var ExtendedComposer = BasicComposer.extend({
@@ -872,6 +800,7 @@ odoo.define('mail.composer', function (require) {
             });
             this._super(parent, options);
             this.extended = true;
+            this.emoji_container_classname = 'o_extended_composer_emoji';
         },
 
         start: function () {
@@ -888,15 +817,7 @@ odoo.define('mail.composer', function (require) {
                 return message;
             });
         },
-        clear_composer: function () {
-            this._super.apply(this, arguments);
-            this.$subject_input.val('');
-        },
-        getState: function () {
-            var state = this._super.apply(this, arguments);
-            state.subject = this.$subject_input.val();
-            return state;
-        },
+
         should_send: function () {
             return false;
         },
@@ -909,10 +830,6 @@ odoo.define('mail.composer', function (require) {
         },
         set_subject: function (subject) {
             this.$('.o_composer_subject input').val(subject);
-        },
-        setState: function (state) {
-            this._super.apply(this, arguments);
-            this.set_subject(state.subject);
         },
     });
 

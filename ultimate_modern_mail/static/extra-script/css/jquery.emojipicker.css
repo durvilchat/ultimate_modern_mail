@@ -237,11 +237,8 @@
 }
 
 .o_composer_button_cancel {
-    border-radius: 0 3px 3px 0;
-    padding: 10px 12px;
-    border: 1px solid #6c6ba3;
-    border-left-width: 1px;
-    border-left-width: 0;
+    background: #303030;
+    color: white;
 }
 
 .o_chat_window .o_editemessage {
