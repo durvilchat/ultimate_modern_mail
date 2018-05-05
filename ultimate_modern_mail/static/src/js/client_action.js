@@ -964,10 +964,10 @@ odoo.define('mail.chat_client_action', function (require) {
                 def.then(function (value) {
                     if (value !== 'granted') {
                         utils.send_notification(self, _t('Permission denied'),
-                            _t('Odoo will not have the permission to send native notifications on this device.'));
+                            _t('Will not have the permission to send native notifications on this device.'));
                     } else {
                         utils.send_notification(self, _t('Permission granted'),
-                            _t('Odoo has now the permission to send you native notifications on this device.'));
+                            _t('Has now the permission to send you native notifications on this device.'));
                     }
                 });
             }

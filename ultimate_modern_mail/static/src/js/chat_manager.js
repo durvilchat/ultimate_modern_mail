@@ -480,7 +480,6 @@ odoo.define('mail.chat_manager', function (require) {
                 on_needaction_notification(notification[1]);
             } else if (model === 'mail.channel') {
                 // new message in a channel
-                console.log(notifications);
                 on_channel_notification(notification[1]);
             } else if (model === 'res.partner') {
                 // channel joined/left, message marked as read/(un)starred, chat open/closed
@@ -927,15 +926,6 @@ odoo.define('mail.chat_manager', function (require) {
                 method: 'edit_message',
                 args: [message.id],
                 kwargs: {body: msg.body},
-            }).then(function (value) {
-                return self._rpc({
-                    model: 'mail.message',
-                    method: 'message_format',
-                    args: [message.id],
-                })
-                    .then(function (msgs) {
-                        edit_message(msgs[0]);
-                    });
             });
         },
 
