@@ -8,7 +8,7 @@
 
     'category': 'Discuss',
     'version': '1.0',
-    'price': 60,
+    'price': 75,
     'currency': 'EUR',
     'license': 'AGPL-3',
     'installable': True,
@@ -24,6 +24,6 @@
     ],
 
     # any module necessary for this one to work correctly
-    'depends': ['base', 'mail', 'mail_modern']
+    'depends': ['base', 'mail']
 
 }
