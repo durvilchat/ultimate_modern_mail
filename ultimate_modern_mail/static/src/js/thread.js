@@ -49,6 +49,14 @@ odoo.define('ultimate_mail_modern.thread', function (require) {
                 else
                     itemSelect.addClass('hide');
             },
+            "click .coll .o_thread_message_content ": function (event) {
+                event.preventDefault();
+                var itemSelect = $(event.currentTarget).find(".o_thread_message_sidebar_small");
+                if (itemSelect.hasClass("hide"))
+                    itemSelect.removeClass('hide');
+                else
+                    itemSelect.addClass('hide');
+            },
             "click .o_editemessage": function (event) {
                 this.selected_id = $(event.currentTarget).data('message-id');
                 this.$('.o_thread_message').removeClass('o_thread_selected_message');
