@@ -140,13 +140,15 @@ odoo.define('mail.chat_manager', function (require) {
     function deleteMessage(data, options) {
         options = options || {};
         var msg = chat_manager.make_message(data);
-        var index = _.sortedIndex(messages, msg, 'id');
-        if (messages[index].id === msg.id) {
-            messages.splice(index, 1);
-            remove_to_cache(msg, options.domain);
-            chat_manager.bus.trigger('new_message', msg);
+        if (msg) {
+            var index = _.sortedIndex(messages, msg, 'id');
+            if (messages[index].id === msg.id) {
+                messages.splice(index, 1);
+                remove_to_cache(msg, options.domain);
+                chat_manager.bus.trigger('new_message', msg);
+            }
+            return msg;
         }
-        return msg;
     }
 
 

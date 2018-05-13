@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
+
     <t t-extend="mail.ChatThread.Message">
           <t t-jquery="div" t-operation="replace">
           <div t-if="!is_system_notification" t-att-class="'o_thread_message' + (message.expanded ? ' o_message_expanded '  : ' ') + (message.is_selected ? 'o_thread_selected_message' : ' ') + (message.is_author ? ' align-right' : ' ')+(!message.display_author?' coll':'')" t-att-data-message-id="message.id">

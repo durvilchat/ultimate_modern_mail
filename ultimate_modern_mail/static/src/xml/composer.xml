@@ -1,43 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-
-    <t t-extend="mail.ChatComposer">
-        <t t-jquery="div" t-operation="replace">
-     <div t-name="mail.ChatComposer" t-attf-class="o_chat_composer #{widget.extended ? 'o_chat_composer_extended' : (widget.notInline ? '' : 'o_chat_inline_composer')} #{widget.isMini ? 'o_chat_mini_composer' : ''}">
-         <div class="o_composer_container">
-            <div t-if="widget.extended" class="o_composer_subject">
-                 <input tabindex="1" type="text" placeholder="Subject" class="o_input"/>
-             </div>
-             <div t-attf-class="o_composer #{widget.extended ? 'o_extended_composer' : ''}">
-                <div class="o_composer_input">
-                   <textarea class="o_input o_composer_text_field" id="o_composer_text_field" tabindex="2" placeholder="Write something..."/>
-                    <div class="o_chatter_composer_tools">
-                        <button tabindex="4" class="btn btn-sm btn-icon fa fa-smile-o o_composer_button_emoji" type="button" data-toggle="popover"/>
-                        <button tabindex="5" class="btn btn-sm btn-icon fa fa-paperclip o_composer_button_add_attachment" type="button"/>
-                        <button t-if="widget.options.isMobile" tabindex="3" class="btn btn-sm btn-icon fa fa-paper-plane-o o_composer_button_send" type="button"/>
-                    </div>
-                </div>
-             </div>
-
-             <div class="o_composer_attachments_list"/>
-         </div>
-         <div class="o_composer_send">
-             <button tabindex="3" class="btn btn-sm btn-primary o_composer_button_send hidden-xs" type="button"><t t-esc="widget.options.send_text"/></button>
-         </div>
-         <span class="hide">
-            <t t-call="HiddenInputFile">
-                <t t-set="fileupload_id" t-value="widget.fileupload_id"/>
-                <t t-set="fileupload_action" t-translation="off">/web/binary/upload_attachment</t>
-                <t t-set="multi_upload" t-value="true"/>
-                <input type="hidden" name="model" value="mail.compose.message"/>
-                <input type="hidden" name="id" value="0"/>
-                <input type="hidden" name="session_id" t-att-value="widget.getSession().session_id"/>
-            </t>
-         </span>
-    </div>
-     </t>
-    </t>
-
         <div t-name="mail.ChatComposer.emojis.new" class="o_mail_emoji_container">
         <t t-foreach="emojis" t-as="emoji">
              <div>
