@@ -4,7 +4,7 @@
 
     'summary': """A modern chat for your odoo ERP, delete,edit, emojis""",
 
-    'author': "Kywana dev solution",
+    'author': "Nusyce LTD",
 
     'category': 'Discuss',
     'version': '1.0',
